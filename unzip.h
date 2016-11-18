@@ -21,6 +21,8 @@
 extern "C" {
 #endif
 
+#include "zconf.h"
+
 #ifndef _ZLIB_H
 #include "zlib.h"
 #endif
