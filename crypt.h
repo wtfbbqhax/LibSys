@@ -31,6 +31,8 @@
    access functions to crctables and pkeys
 
 */
+#ifndef _MINIZIP_CRYPT_H
+#define _MINIZIP_CRYPT_H
 
 #define CRC32(c, b) ((*(pcrc_32_tab+(((unsigned int)(c) ^ (b)) & 0xff))) ^ ((c) >> 8))
 
@@ -134,4 +136,5 @@ static int crypthead(const char* passwd,      /* password string */
     return n;
 }
 
+#endif
 #endif
