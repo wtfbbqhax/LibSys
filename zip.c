@@ -14,23 +14,14 @@
    See the accompanying LICENSE file for the full text of the license.
 */
 
+#include "zip.h"
+
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
-#include "zlib.h"
-#include "zip.h"
 
-#ifdef STDC
-#  include <stddef.h>
-#  include <string.h>
-#  include <stdlib.h>
-#endif
-#ifdef NO_ERRNO_H
-    extern int errno;
-#else
-#   include <errno.h>
-#endif
+#include "zlib.h"
 
 #ifdef HAVE_AES
 #  define AES_METHOD          (99)
@@ -50,11 +41,6 @@
 #  define INCLUDECRYPTINGCODE_IFCRYPTALLOWED
 #  include "crypt.h"
 #endif
-
-#ifndef local
-#  define local static
-#endif
-/* compile with -Dlocal if your debugger can't find static symbols */
 
 #define SIZEDATA_INDATABLOCK        (4096-(4*4))
 
@@ -183,8 +169,7 @@ typedef struct
 } zip64_internal;
 
 /* Allocate a new data block */
-local linkedlist_datablock_internal* allocate_new_datablock OF(());
-local linkedlist_datablock_internal* allocate_new_datablock()
+static linkedlist_datablock_internal* allocate_new_datablock()
 {
     linkedlist_datablock_internal* ldi;
 
@@ -200,8 +185,7 @@ local linkedlist_datablock_internal* allocate_new_datablock()
 }
 
 /* Free data block in linked list */
-local void free_datablock OF((linkedlist_datablock_internal* ldi));
-local void free_datablock(linkedlist_datablock_internal* ldi)
+static void free_datablock(linkedlist_datablock_internal* ldi)
 {
     while (ldi != NULL)
     {
@@ -212,23 +196,20 @@ local void free_datablock(linkedlist_datablock_internal* ldi)
 }
 
 /* Initialize linked list */
-local void init_linkedlist OF((linkedlist_data* ll));
-local void init_linkedlist(linkedlist_data* ll)
+static void init_linkedlist(linkedlist_data* ll)
 {
     ll->first_block = ll->last_block = NULL;
 }
 
 /* Free entire linked list and all data blocks */
-local void free_linkedlist OF((linkedlist_data* ll));
-local void free_linkedlist(linkedlist_data* ll)
+static void free_linkedlist(linkedlist_data* ll)
 {
     free_datablock(ll->first_block);
     ll->first_block = ll->last_block = NULL;
 }
 
 /* Add data to linked list data block */
-local int add_data_in_datablock OF((linkedlist_data* ll, const void* buf, uLong len));
-local int add_data_in_datablock(linkedlist_data* ll, const void* buf, uLong len)
+static int add_data_in_datablock(linkedlist_data* ll, const void* buf, uLong len)
 {
     linkedlist_datablock_internal* ldi;
     const unsigned char* from_copy;
@@ -279,8 +260,7 @@ local int add_data_in_datablock(linkedlist_data* ll, const void* buf, uLong len)
     return ZIP_OK;
 }
 
-local uLong zip64local_TmzDateToDosDate OF((const tm_zip* ptm));
-local uLong zip64local_TmzDateToDosDate(const tm_zip* ptm)
+static uLong zip64local_TmzDateToDosDate(const tm_zip* ptm)
 {
     uLong year;
 #define zip64local_in_range(min, max, value) ((min) <= (value) && (value) <= (max))
@@ -313,9 +293,7 @@ local uLong zip64local_TmzDateToDosDate(const tm_zip* ptm)
 }
 
 /* Inputs a long in LSB order to the given file: nbByte == 1, 2 ,4 or 8 (byte, short or long, ZPOS64_T) */
-local int zip64local_putValue OF((const zlib_filefunc64_32_def* pzlib_filefunc_def, voidpf filestream,
-    ZPOS64_T x, int nbByte));
-local int zip64local_putValue (const zlib_filefunc64_32_def* pzlib_filefunc_def, voidpf filestream,
+static int zip64local_putValue (const zlib_filefunc64_32_def* pzlib_filefunc_def, voidpf filestream,
     ZPOS64_T x, int nbByte)
 {
     unsigned char buf[8];
@@ -340,8 +318,7 @@ local int zip64local_putValue (const zlib_filefunc64_32_def* pzlib_filefunc_def,
     return ZIP_OK;
 }
 
-local ZPOS64_T zip64local_getValue_frommemory OF((void* src, int nbByte));
-local ZPOS64_T zip64local_getValue_frommemory (void* src, int nbByte)
+static ZPOS64_T zip64local_getValue_frommemory (void* src, int nbByte)
 {
     ZPOS64_T x = 0;
     unsigned char* buf =(unsigned char*)src;
@@ -353,8 +330,7 @@ local ZPOS64_T zip64local_getValue_frommemory (void* src, int nbByte)
     return x;
 }
 
-local void zip64local_putValue_inmemory OF((void* dest, ZPOS64_T x, int nbByte));
-local void zip64local_putValue_inmemory (void* dest, ZPOS64_T x, int nbByte)
+static void zip64local_putValue_inmemory (void* dest, ZPOS64_T x, int nbByte)
 {
     unsigned char* buf =(unsigned char*)dest;
     int n;
@@ -373,8 +349,7 @@ local void zip64local_putValue_inmemory (void* dest, ZPOS64_T x, int nbByte)
     }
 }
 
-local int zip64local_getByte OF((const zlib_filefunc64_32_def* pzlib_filefunc_def, voidpf filestream, int *pi));
-local int zip64local_getByte(const zlib_filefunc64_32_def* pzlib_filefunc_def,voidpf filestream,int* pi)
+static int zip64local_getByte(const zlib_filefunc64_32_def* pzlib_filefunc_def,voidpf filestream,int* pi)
 {
     unsigned char c;
     int err = (int)ZREAD64(*pzlib_filefunc_def, filestream, &c,1);
@@ -388,8 +363,7 @@ local int zip64local_getByte(const zlib_filefunc64_32_def* pzlib_filefunc_def,vo
     return ZIP_EOF;
 }
 
-local int zip64local_getShort OF((const zlib_filefunc64_32_def* pzlib_filefunc_def, voidpf filestream, uLong *pX));
-local int zip64local_getShort (const zlib_filefunc64_32_def* pzlib_filefunc_def, voidpf filestream, uLong* pX)
+static int zip64local_getShort (const zlib_filefunc64_32_def* pzlib_filefunc_def, voidpf filestream, uLong* pX)
 {
     uLong x;
     int i = 0;
@@ -408,8 +382,7 @@ local int zip64local_getShort (const zlib_filefunc64_32_def* pzlib_filefunc_def,
     return err;
 }
 
-local int zip64local_getLong OF((const zlib_filefunc64_32_def* pzlib_filefunc_def, voidpf filestream, uLong *pX));
-local int zip64local_getLong (const zlib_filefunc64_32_def* pzlib_filefunc_def, voidpf filestream, uLong* pX)
+static int zip64local_getLong (const zlib_filefunc64_32_def* pzlib_filefunc_def, voidpf filestream, uLong* pX)
 {
     uLong x;
     int i = 0;
@@ -434,8 +407,7 @@ local int zip64local_getLong (const zlib_filefunc64_32_def* pzlib_filefunc_def, 
     return err;
 }
 
-local int zip64local_getLong64 OF((const zlib_filefunc64_32_def* pzlib_filefunc_def, voidpf filestream, ZPOS64_T *pX));
-local int zip64local_getLong64 (const zlib_filefunc64_32_def* pzlib_filefunc_def, voidpf filestream, ZPOS64_T *pX)
+static int zip64local_getLong64 (const zlib_filefunc64_32_def* pzlib_filefunc_def, voidpf filestream, ZPOS64_T *pX)
 {
     ZPOS64_T x;
     int i = 0;
@@ -474,8 +446,7 @@ local int zip64local_getLong64 (const zlib_filefunc64_32_def* pzlib_filefunc_def
 }
 
 /* Gets the amount of bytes left to write to the current disk for spanning archives */
-local int zipGetDiskSizeAvailable OF((zipFile file, ZPOS64_T *size_available));
-local int zipGetDiskSizeAvailable(zipFile file, ZPOS64_T *size_available)
+static int zipGetDiskSizeAvailable(zipFile file, ZPOS64_T *size_available)
 {
     zip64_internal* zi;
     ZPOS64_T current_disk_size;
@@ -488,8 +459,7 @@ local int zipGetDiskSizeAvailable(zipFile file, ZPOS64_T *size_available)
 }
 
 /* Goes to a specific disk number for spanning archives */
-local int zipGoToSpecificDisk OF((zipFile file, unsigned long number_disk, int open_existing));
-local int zipGoToSpecificDisk(zipFile file, unsigned long number_disk, int open_existing)
+static int zipGoToSpecificDisk(zipFile file, unsigned long number_disk, int open_existing)
 {
     zip64_internal* zi;
     int err = ZIP_OK;
@@ -512,8 +482,7 @@ local int zipGoToSpecificDisk(zipFile file, unsigned long number_disk, int open_
 }
 
 /* Goes to the first disk in a spanned archive */
-local int zipGoToFirstDisk OF((zipFile file));
-local int zipGoToFirstDisk(zipFile file)
+static int zipGoToFirstDisk(zipFile file)
 {
     zip64_internal* zi;
     uLong number_disk_next;
@@ -536,8 +505,7 @@ local int zipGoToFirstDisk(zipFile file)
 }
 
 /* Goes to the next disk in a spanned archive */
-local int zipGoToNextDisk OF((zipFile file));
-local int zipGoToNextDisk(zipFile file)
+static int zipGoToNextDisk(zipFile file)
 {
     zip64_internal* zi;
     ZPOS64_T size_available_in_disk;
@@ -572,8 +540,7 @@ local int zipGoToNextDisk(zipFile file)
 }
 
 /* Locate the Central directory of a zipfile (at the end, just before the global comment) */
-local ZPOS64_T zip64local_SearchCentralDir OF((const zlib_filefunc64_32_def* pzlib_filefunc_def, voidpf filestream));
-local ZPOS64_T zip64local_SearchCentralDir(const zlib_filefunc64_32_def* pzlib_filefunc_def, voidpf filestream)
+static ZPOS64_T zip64local_SearchCentralDir(const zlib_filefunc64_32_def* pzlib_filefunc_def, voidpf filestream)
 {
     unsigned char* buf;
     ZPOS64_T file_size;
@@ -633,9 +600,7 @@ local ZPOS64_T zip64local_SearchCentralDir(const zlib_filefunc64_32_def* pzlib_f
 }
 
 /* Locate the Central directory 64 of a zipfile (at the end, just before the global comment) */
-local ZPOS64_T zip64local_SearchCentralDir64 OF((const zlib_filefunc64_32_def* pzlib_filefunc_def, voidpf filestream,
-    const ZPOS64_T endcentraloffset));
-local ZPOS64_T zip64local_SearchCentralDir64(const zlib_filefunc64_32_def* pzlib_filefunc_def, voidpf filestream,
+static ZPOS64_T zip64local_SearchCentralDir64(const zlib_filefunc64_32_def* pzlib_filefunc_def, voidpf filestream,
     const ZPOS64_T endcentraloffset)
 {
     ZPOS64_T offset;
@@ -757,38 +722,47 @@ extern zipFile ZEXPORT zipOpen4(const void *pathname, int append, ZPOS64_T disk_
             /* The signature, already checked */
             if (zip64local_getLong(&ziinit.z_filefunc, ziinit.filestream, &uL) != ZIP_OK)
                 err = ZIP_ERRNO;
+
             /* Number of this disk */
             if (zip64local_getShort(&ziinit.z_filefunc, ziinit.filestream, &ziinit.number_disk) != ZIP_OK)
                 err = ZIP_ERRNO;
+
             /* Number of the disk with the start of the central directory */
             if (zip64local_getShort(&ziinit.z_filefunc, ziinit.filestream, &ziinit.number_disk_with_CD) != ZIP_OK)
                 err = ZIP_ERRNO;
+
             /* Total number of entries in the central dir on this disk */
             number_entry = 0;
             if (zip64local_getShort(&ziinit.z_filefunc, ziinit.filestream, &uL) != ZIP_OK)
                 err = ZIP_ERRNO;
             else
                 number_entry = uL;
+
             /* Total number of entries in the central dir */
             number_entry_CD = 0;
             if (zip64local_getShort(&ziinit.z_filefunc, ziinit.filestream, &uL) != ZIP_OK)
                 err = ZIP_ERRNO;
             else
                 number_entry_CD = uL;
-            if (number_entry_CD!=number_entry)
+
+#warning "FIXME: Possibly lost information `if (number_entry_CD != number_entry) { err = ZIP_BADZIPFILE }"
+            if (number_entry_CD != number_entry)
                 err = ZIP_BADZIPFILE;
+
             /* Size of the central directory */
             size_central_dir = 0;
             if (zip64local_getLong(&ziinit.z_filefunc, ziinit.filestream, &uL) != ZIP_OK)
                 err = ZIP_ERRNO;
             else
                 size_central_dir = uL;
+
             /* Offset of start of central directory with respect to the starting disk number */
             offset_central_dir = 0;
             if (zip64local_getLong(&ziinit.z_filefunc, ziinit.filestream, &uL) != ZIP_OK)
                 err = ZIP_ERRNO;
             else
                 offset_central_dir = uL;
+
             /* Zipfile global comment length */
             if (zip64local_getShort(&ziinit.z_filefunc, ziinit.filestream, &size_comment) != ZIP_OK)
                 err = ZIP_ERRNO;
@@ -806,40 +780,31 @@ extern zipFile ZEXPORT zipOpen4(const void *pathname, int append, ZPOS64_T disk_
                         err = ZIP_ERRNO;
 
                     /* The signature, already checked */
-                    if (zip64local_getLong(&ziinit.z_filefunc, ziinit.filestream, &uL) != ZIP_OK)
-                        err = ZIP_ERRNO;
+                    if (zip64local_getLong(&ziinit.z_filefunc, ziinit.filestream, &uL) != ZIP_OK) err = ZIP_ERRNO;
                     /* Size of zip64 end of central directory record */
-                    if (zip64local_getLong64(&ziinit.z_filefunc, ziinit.filestream, &sizeEndOfCentralDirectory) != ZIP_OK)
-                        err = ZIP_ERRNO;
+                    if (zip64local_getLong64(&ziinit.z_filefunc, ziinit.filestream, &sizeEndOfCentralDirectory) != ZIP_OK) err = ZIP_ERRNO;
                     /* Version made by */
-                    if (zip64local_getShort(&ziinit.z_filefunc, ziinit.filestream, &uL) != ZIP_OK)
-                        err = ZIP_ERRNO;
+                    if (zip64local_getShort(&ziinit.z_filefunc, ziinit.filestream, &uL) != ZIP_OK) err = ZIP_ERRNO;
                     /* Version needed to extract */
-                    if (zip64local_getShort(&ziinit.z_filefunc, ziinit.filestream, &uL) != ZIP_OK)
-                        err = ZIP_ERRNO;
+                    if (zip64local_getShort(&ziinit.z_filefunc, ziinit.filestream, &uL) != ZIP_OK) err = ZIP_ERRNO;
                     /* Number of this disk */
-                    if (zip64local_getLong(&ziinit.z_filefunc, ziinit.filestream, &ziinit.number_disk) != ZIP_OK)
-                        err = ZIP_ERRNO;
+                    if (zip64local_getLong(&ziinit.z_filefunc, ziinit.filestream, &ziinit.number_disk) != ZIP_OK) err = ZIP_ERRNO;
                     /* Number of the disk with the start of the central directory */
-                    if (zip64local_getLong(&ziinit.z_filefunc, ziinit.filestream, &ziinit.number_disk_with_CD) != ZIP_OK)
-                        err = ZIP_ERRNO;
+                    if (zip64local_getLong(&ziinit.z_filefunc, ziinit.filestream, &ziinit.number_disk_with_CD) != ZIP_OK) err = ZIP_ERRNO;
                     /* Total number of entries in the central directory on this disk */
-                    if (zip64local_getLong64(&ziinit.z_filefunc, ziinit.filestream, &number_entry) != ZIP_OK)
-                        err = ZIP_ERRNO;
+                    if (zip64local_getLong64(&ziinit.z_filefunc, ziinit.filestream, &number_entry) != ZIP_OK) err = ZIP_ERRNO;
                     /* Total number of entries in the central directory */
-                    if (zip64local_getLong64(&ziinit.z_filefunc, ziinit.filestream, &number_entry_CD) != ZIP_OK)
-                        err = ZIP_ERRNO;
-                    if (number_entry_CD!=number_entry)
-                        err = ZIP_BADZIPFILE;
+                    if (zip64local_getLong64(&ziinit.z_filefunc, ziinit.filestream, &number_entry_CD) != ZIP_OK) err = ZIP_ERRNO;
+                    if (number_entry_CD!=number_entry) err = ZIP_BADZIPFILE;
                     /* Size of the central directory */
-                    if (zip64local_getLong64(&ziinit.z_filefunc, ziinit.filestream, &size_central_dir) != ZIP_OK)
-                        err = ZIP_ERRNO;
+                    if (zip64local_getLong64(&ziinit.z_filefunc, ziinit.filestream, &size_central_dir) != ZIP_OK) err = ZIP_ERRNO;
                     /* Offset of start of central directory with respect to the starting disk number */
-                    if (zip64local_getLong64(&ziinit.z_filefunc, ziinit.filestream, &offset_central_dir) != ZIP_OK)
-                        err = ZIP_ERRNO;
+                    if (zip64local_getLong64(&ziinit.z_filefunc, ziinit.filestream, &offset_central_dir) != ZIP_OK) err = ZIP_ERRNO;
                 }
                 else
+                {
                     err = ZIP_BADZIPFILE;
+                }
              }
         }
 
@@ -1393,8 +1358,8 @@ extern int ZEXPORT zipOpenNewFileInZip(zipFile file, const char* filename, const
 }
 
 /* Flushes the write buffer to disk */
-local int zip64FlushWriteBuffer OF((zip64_internal* zi));
-local int zip64FlushWriteBuffer(zip64_internal* zi)
+static int zip64FlushWriteBuffer OF((zip64_internal* zi));
+static int zip64FlushWriteBuffer(zip64_internal* zi)
 {
     int err = ZIP_OK;
     uLong written = 0;

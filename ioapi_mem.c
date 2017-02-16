@@ -19,23 +19,23 @@
 */
 
 
+#include "ioapi.h"
+#include "ioapi_mem.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "zlib.h"
-#include "ioapi.h"
-
-#include "ioapi_mem.h"
+#include "zconf.h"
 
 #ifndef IOMEM_BUFFERSIZE
 #  define IOMEM_BUFFERSIZE (64 * 1024)
 #endif 
 
-voidpf ZCALLBACK fopen_mem_func (opaque, filename, mode)
-   voidpf opaque;
-   const char* filename;
-   int mode;
+voidpf ZCALLBACK fopen_mem_func (
+   voidpf opaque,
+   const char* filename,
+   int mode)
 {
     ourmemory_t *mem = (ourmemory_t *)opaque;
     if (mem == NULL)
@@ -59,21 +59,21 @@ voidpf ZCALLBACK fopen_mem_func (opaque, filename, mode)
     return mem;
 }
 
-voidpf ZCALLBACK fopendisk_mem_func (opaque, stream, number_disk, mode)
-   voidpf opaque;
-   voidpf stream;
-   int number_disk;
-   int mode;
+voidpf ZCALLBACK fopendisk_mem_func (
+   voidpf opaque,
+   voidpf stream,
+   unsigned long number_disk,
+   int mode)
 {
     /* Not used */
     return NULL;
 }
 
-uLong ZCALLBACK fread_mem_func (opaque, stream, buf, size)
-   voidpf opaque;
-   voidpf stream;
-   void* buf;
-   uLong size;
+uLong ZCALLBACK fread_mem_func (
+   voidpf opaque,
+   voidpf stream,
+   void* buf,
+   uLong size)
 {
     ourmemory_t *mem = (ourmemory_t *)stream;
 
@@ -87,11 +87,11 @@ uLong ZCALLBACK fread_mem_func (opaque, stream, buf, size)
 }
 
 
-uLong ZCALLBACK fwrite_mem_func (opaque, stream, buf, size)
-   voidpf opaque;
-   voidpf stream;
-   const void* buf;
-   uLong size;
+uLong ZCALLBACK fwrite_mem_func (
+   voidpf opaque,
+   voidpf stream,
+   const void* buf,
+   uLong size)
 {
     ourmemory_t *mem = (ourmemory_t *)stream;
     char *newbase = NULL;
@@ -123,19 +123,19 @@ uLong ZCALLBACK fwrite_mem_func (opaque, stream, buf, size)
     return size;
 }
 
-long ZCALLBACK ftell_mem_func (opaque, stream)
-   voidpf opaque;
-   voidpf stream;
+long ZCALLBACK ftell_mem_func (
+   voidpf opaque,
+   voidpf stream)
 {
     ourmemory_t *mem = (ourmemory_t *)stream;
     return mem->cur_offset;
 }
 
-long ZCALLBACK fseek_mem_func (opaque, stream, offset, origin)
-   voidpf opaque;
-   voidpf stream;
-   uLong offset;
-   int origin;
+long ZCALLBACK fseek_mem_func (
+   voidpf opaque,
+   voidpf stream,
+   uLong offset,
+   int origin)
 {
     ourmemory_t *mem = (ourmemory_t *)stream;
     uLong new_pos;
@@ -160,25 +160,25 @@ long ZCALLBACK fseek_mem_func (opaque, stream, offset, origin)
     return 0;
 }
 
-int ZCALLBACK fclose_mem_func (opaque, stream)
-   voidpf opaque;
-   voidpf stream;
+int ZCALLBACK fclose_mem_func (
+   voidpf opaque,
+   voidpf stream)
 {
     /* Even with grow = 1, caller must always free() memory */
     return 0;
 }
 
-int ZCALLBACK ferror_mem_func (opaque, stream)
-   voidpf opaque;
-   voidpf stream;
+int ZCALLBACK ferror_mem_func (
+   voidpf opaque,
+   voidpf stream)
 {
     /* We never return errors */
     return 0;
 }
 
-void fill_memory_filefunc (pzlib_filefunc_def, ourmem)
-   zlib_filefunc_def* pzlib_filefunc_def;
-   ourmemory_t *ourmem;
+void fill_memory_filefunc (
+   zlib_filefunc_def* pzlib_filefunc_def,
+   ourmemory_t *ourmem)
 {
     pzlib_filefunc_def->zopen_file = fopen_mem_func;
     pzlib_filefunc_def->zopendisk_file = fopendisk_mem_func;
