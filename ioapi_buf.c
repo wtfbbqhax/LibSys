@@ -11,26 +11,26 @@
 */
 
 
+#include "ioapi.h"
+#include "ioapi_buf.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <errno.h>
 
-#include "zlib.h"
-#include "ioapi.h"
+#include "zconf.h"
 
-#include "ioapi_buf.h"
+//#if defined(_WIN32)
+//#  include <conio.h>
+//#  define PRINTF  _cprintf
+//#  define VPRINTF _vcprintf
 
-#if defined(_WIN32)
-#  include <conio.h>
-#  define PRINTF  _cprintf
-#  define VPRINTF _vcprintf
-#else
-#  define PRINTF  printf
-#  define VPRINTF vprintf
-#endif
+#define PRINTF  printf
+#define VPRINTF vprintf
 
-//#define IOBUF_VERBOSE
+#define IOBUF_VERBOSE
 
 #ifdef __GNUC__
 #ifndef max
@@ -66,11 +66,6 @@ typedef struct ourstream_s {
 } ourstream_t;
 
 #if defined(IOBUF_VERBOSE)
-#  define print_buf(o,s,f,...) print_buf_internal(o,s,f,__VA_ARGS__);
-#else
-#  define print_buf(o,s,f,...)
-#endif 
-
 void print_buf_internal(voidpf opaque, voidpf stream, char *format, ...)
 {
     ourstream_t *streamio = (ourstream_t *)stream;
@@ -80,50 +75,57 @@ void print_buf_internal(voidpf opaque, voidpf stream, char *format, ...)
     VPRINTF(format, arglist);
     va_end(arglist);
 }
+#  define print_buf(o,s,...) print_buf_internal(o, s, __VA_ARGS__);
 
-voidpf fopen_buf_internal_func (opaque, stream, number_disk, mode)
-   voidpf opaque;
-   voidpf stream;
-   int number_disk;
-   int mode;
+#else
+#  define print_buf(o,s,...)
+#endif
+
+static voidpf fopen_buf_internal_func (
+   voidpf opaque,
+   voidpf stream,
+   unsigned long number_disk,
+   int mode)
 {
-    ourstream_t *streamio = NULL;
     if (stream == NULL)
         return NULL;
-    streamio = (ourstream_t *)malloc(sizeof(ourstream_t));
+
+    ourstream_t *streamio = (ourstream_t *)malloc(sizeof(ourstream_t));
     if (streamio == NULL)
         return NULL;
+
     memset(streamio, 0, sizeof(ourstream_t));
     streamio->stream = stream;
     print_buf(opaque, streamio, "open [num %d mode %d]\n", number_disk, mode);
     return streamio;
 }
 
-voidpf ZCALLBACK fopen_buf_func (opaque, filename, mode)
-   voidpf opaque;
-   const char* filename;
-   int mode;
+voidpf ZCALLBACK fopen_buf_func (
+   voidpf opaque,
+   const char* filename,
+   int mode)
 {
     ourbuffer_t *bufio = (ourbuffer_t *)opaque;
     voidpf stream = bufio->filefunc.zopen_file(bufio->filefunc.opaque, filename, mode);
     return fopen_buf_internal_func(opaque, stream, 0, mode);
 }
 
-voidpf ZCALLBACK fopen64_buf_func (opaque, filename, mode)
-   voidpf opaque;
-   const char* filename;
-   int mode;
+voidpf ZCALLBACK fopen64_buf_func (
+   voidpf opaque,
+   const void* _filename,
+   int mode)
 {
+    const char* filename = (const char*)_filename;
     ourbuffer_t *bufio = (ourbuffer_t *)opaque;
     voidpf stream = bufio->filefunc64.zopen64_file(bufio->filefunc64.opaque, filename, mode);
     return fopen_buf_internal_func(opaque, stream, 0, mode);
 }
 
-voidpf ZCALLBACK fopendisk_buf_func (opaque, stream_cd, number_disk, mode)
-   voidpf opaque;
-   voidpf stream_cd;
-   int number_disk;
-   int mode;
+voidpf ZCALLBACK fopendisk_buf_func (
+   voidpf opaque,
+   voidpf stream_cd,
+   unsigned long number_disk,
+   int mode)
 {
     ourbuffer_t *bufio = (ourbuffer_t *)opaque;
     ourstream_t *streamio = (ourstream_t *)stream_cd;
@@ -131,11 +133,11 @@ voidpf ZCALLBACK fopendisk_buf_func (opaque, stream_cd, number_disk, mode)
     return fopen_buf_internal_func(opaque, stream, number_disk, mode);
 }
 
-voidpf ZCALLBACK fopendisk64_buf_func (opaque, stream_cd, number_disk, mode)
-   voidpf opaque;
-   voidpf stream_cd;
-   int number_disk;
-   int mode;
+voidpf ZCALLBACK fopendisk64_buf_func (
+   voidpf opaque,
+   voidpf stream_cd,
+   unsigned long number_disk,
+   int mode)
 {
     ourbuffer_t *bufio = (ourbuffer_t *)opaque;
     ourstream_t *streamio = (ourstream_t *)stream_cd;
@@ -143,10 +145,9 @@ voidpf ZCALLBACK fopendisk64_buf_func (opaque, stream_cd, number_disk, mode)
     return fopen_buf_internal_func(opaque, stream, number_disk, mode);
 }
 
-long fflush_buf OF((voidpf opaque, voidpf stream));
-long fflush_buf (opaque, stream)
-   voidpf opaque;
-   voidpf stream;
+static long fflush_buf (
+   voidpf opaque,
+   voidpf stream)
 {
     ourbuffer_t *bufio = (ourbuffer_t *)opaque;
     ourstream_t *streamio = (ourstream_t *)stream;
@@ -167,7 +168,10 @@ long fflush_buf (opaque, stream)
         print_buf(opaque, stream, "write flush [%d:%d len %d]\n", bytesToWrite, bytesLeftToWrite, streamio->writeBufferLength);
 
         if (bytesWritten < 0)
+        {
+            // XXX: Note that it doesn't rewind to the starting posiotion
             return bytesWritten;
+        }
 
         totalBytesWritten += bytesWritten;
         bytesLeftToWrite -= bytesWritten;
@@ -178,11 +182,11 @@ long fflush_buf (opaque, stream)
     return totalBytesWritten;
 }
 
-uLong ZCALLBACK fread_buf_func (opaque, stream, buf, size)
-   voidpf opaque;
-   voidpf stream;
-   void* buf;
-   uLong size;
+uLong ZCALLBACK fread_buf_func (
+   voidpf opaque,
+   voidpf stream,
+   void* buf,
+   uLong size)
 {
     ourbuffer_t *bufio = (ourbuffer_t *)opaque;
     ourstream_t *streamio = (ourstream_t *)stream;
@@ -244,11 +248,11 @@ uLong ZCALLBACK fread_buf_func (opaque, stream, buf, size)
     return size - bytesLeftToRead;
 }
 
-uLong ZCALLBACK fwrite_buf_func (opaque, stream, buf, size)
-   voidpf opaque;
-   voidpf stream;
-   const void* buf;
-   uLong size;
+uLong ZCALLBACK fwrite_buf_func (
+   voidpf opaque,
+   voidpf stream,
+   const void* buf,
+   uLong size)
 {
     ourbuffer_t *bufio = (ourbuffer_t *)opaque;
     ourstream_t *streamio = (ourstream_t *)stream;
@@ -305,10 +309,10 @@ uLong ZCALLBACK fwrite_buf_func (opaque, stream, buf, size)
     return size - bytesLeftToWrite;
 }
 
-ZPOS64_T ftell_buf_internal_func (opaque, stream, position)
-   voidpf opaque;
-   voidpf stream;
-   ZPOS64_T position;
+static ZPOS64_T ftell_buf_internal_func (
+    voidpf opaque,
+   voidpf stream,
+   ZPOS64_T position)
 {
     ourstream_t *streamio = (ourstream_t *)stream;
     streamio->position = position;
@@ -320,9 +324,9 @@ ZPOS64_T ftell_buf_internal_func (opaque, stream, position)
     return position;
 }
 
-long ZCALLBACK ftell_buf_func (opaque, stream)
-   voidpf opaque;
-   voidpf stream;
+long ZCALLBACK ftell_buf_func (
+   voidpf opaque,
+   voidpf stream)
 {
     ourbuffer_t *bufio = (ourbuffer_t *)opaque;
     ourstream_t *streamio = (ourstream_t *)stream;
@@ -330,9 +334,9 @@ long ZCALLBACK ftell_buf_func (opaque, stream)
     return (long)ftell_buf_internal_func(opaque, stream, position);
 }
 
-ZPOS64_T ZCALLBACK ftell64_buf_func (opaque, stream)
-   voidpf opaque;
-   voidpf stream;
+ZPOS64_T ZCALLBACK ftell64_buf_func (
+   voidpf opaque,
+   voidpf stream)
 {
     ourbuffer_t *bufio = (ourbuffer_t *)opaque;
     ourstream_t *streamio = (ourstream_t *)stream;
@@ -340,11 +344,11 @@ ZPOS64_T ZCALLBACK ftell64_buf_func (opaque, stream)
     return ftell_buf_internal_func(opaque, stream, position);
 }
 
-int fseek_buf_internal_func (opaque, stream, offset, origin)
-   voidpf opaque;
-   voidpf stream;
-   ZPOS64_T offset;
-   int origin;
+static int fseek_buf_internal_func (
+   voidpf opaque,
+   voidpf stream,
+   ZPOS64_T offset,
+   int origin)
 {
     ourstream_t *streamio = (ourstream_t *)stream;
 
@@ -416,11 +420,11 @@ int fseek_buf_internal_func (opaque, stream, offset, origin)
     return 1;
 }
 
-long ZCALLBACK fseek_buf_func (opaque, stream, offset, origin)
-   voidpf opaque;
-   voidpf stream;
-   uLong offset;
-   int origin;
+long ZCALLBACK fseek_buf_func (
+   voidpf opaque,
+   voidpf stream,
+   uLong offset,
+   int origin)
 {
     ourbuffer_t *bufio = (ourbuffer_t *)opaque;
     ourstream_t *streamio = (ourstream_t *)stream;
@@ -433,11 +437,11 @@ long ZCALLBACK fseek_buf_func (opaque, stream, offset, origin)
     return retVal;
 }
 
-long ZCALLBACK fseek64_buf_func (opaque, stream, offset, origin)
-   voidpf opaque;
-   voidpf stream;
-   ZPOS64_T offset;
-   int origin;
+long ZCALLBACK fseek64_buf_func (
+   voidpf opaque,
+   voidpf stream,
+   ZPOS64_T offset,
+   int origin)
 {
     ourbuffer_t *bufio = (ourbuffer_t *)opaque;
     ourstream_t *streamio = (ourstream_t *)stream;
@@ -450,19 +454,26 @@ long ZCALLBACK fseek64_buf_func (opaque, stream, offset, origin)
     return retVal;
 }
 
-int ZCALLBACK fclose_buf_func (opaque, stream)
-   voidpf opaque;
-   voidpf stream;
+int ZCALLBACK fclose_buf_func (
+   voidpf opaque,
+   voidpf stream)
 {
     ourbuffer_t *bufio = (ourbuffer_t *)opaque;
     ourstream_t *streamio = (ourstream_t *)stream;
     int retVal = 0;
     fflush_buf(opaque, stream);
+
     print_buf(opaque, stream, "close\n");
+
     if (streamio->readBufferHits + streamio->readBufferMisses > 0)
+    {
         print_buf(opaque, stream, "read efficency %.02f%%\n", (streamio->readBufferHits / ((float)streamio->readBufferHits + streamio->readBufferMisses)) * 100);
+    }
     if (streamio->writeBufferHits + streamio->writeBufferMisses > 0)
+    {
         print_buf(opaque, stream, "write efficency %.02f%%\n", (streamio->writeBufferHits / ((float)streamio->writeBufferHits + streamio->writeBufferMisses)) * 100);
+    }
+
     if (bufio->filefunc64.zclose_file != NULL)
         retVal = bufio->filefunc64.zclose_file(bufio->filefunc64.opaque, streamio->stream);
     else 
@@ -471,9 +482,9 @@ int ZCALLBACK fclose_buf_func (opaque, stream)
     return retVal;
 }
 
-int ZCALLBACK ferror_buf_func (opaque, stream)
-   voidpf opaque;
-   voidpf stream;
+int ZCALLBACK ferror_buf_func (
+    voidpf opaque,
+    voidpf stream)
 {
     ourbuffer_t *bufio = (ourbuffer_t *)opaque;
     ourstream_t *streamio = (ourstream_t *)stream;
@@ -482,10 +493,9 @@ int ZCALLBACK ferror_buf_func (opaque, stream)
     return bufio->filefunc.zerror_file(bufio->filefunc.opaque, streamio->stream);
 }
 
-
-void fill_buffer_filefunc (pzlib_filefunc_def, ourbuf)
-   zlib_filefunc_def* pzlib_filefunc_def;
-   ourbuffer_t *ourbuf;
+void fill_buffer_filefunc (
+    zlib_filefunc_def* pzlib_filefunc_def,
+    ourbuffer_t *ourbuf )
 {
     pzlib_filefunc_def->zopen_file = fopen_buf_func;
     pzlib_filefunc_def->zopendisk_file = fopendisk_buf_func;
@@ -498,9 +508,9 @@ void fill_buffer_filefunc (pzlib_filefunc_def, ourbuf)
     pzlib_filefunc_def->opaque = ourbuf;
 }
 
-void fill_buffer_filefunc64 (pzlib_filefunc_def, ourbuf)
-   zlib_filefunc64_def* pzlib_filefunc_def;
-   ourbuffer_t *ourbuf;
+void fill_buffer_filefunc64 (
+        zlib_filefunc64_def* pzlib_filefunc_def,
+        ourbuffer_t *ourbuf )
 {
     pzlib_filefunc_def->zopen64_file = fopen64_buf_func;
     pzlib_filefunc_def->zopendisk64_file = fopendisk64_buf_func;

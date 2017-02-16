@@ -11,10 +11,14 @@
    See the accompanying LICENSE file for the full text of the license.
 */
 
+
+#include "ioapi.h"
+
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "ioapi.h"
+#include "zconf.h"
 
 #if defined(_WIN32)
 #  define snprintf _snprintf

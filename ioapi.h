@@ -29,9 +29,7 @@
 #  endif
 #endif
 
-#include <stdio.h>
-#include <stdlib.h>
-#include "zlib.h"
+#include "zconf.h"
 
 #if defined(USE_FILE32API)
 #  define fopen64 fopen
@@ -86,8 +84,8 @@ extern "C" {
 #define ZLIB_FILEFUNC_MODE_CREATE           (8)
 
 #ifndef ZCALLBACK
-#  if (defined(WIN32) || defined(_WIN32) || defined (WINDOWS) || \
-       defined (_WINDOWS)) && defined(CALLBACK) && defined (USEWINDOWS_CALLBACK)
+#  if (defined(WIN32) || defined(_WIN32) || defined (WINDOWS) || defined (_WINDOWS)) \
+      && defined(CALLBACK) && defined (USEWINDOWS_CALLBACK)
 #    define ZCALLBACK CALLBACK
 #  else
 #    define ZCALLBACK
@@ -118,10 +116,10 @@ typedef struct zlib_filefunc_def_s
     voidpf              opaque;
 } zlib_filefunc_def;
 
-typedef ZPOS64_T (ZCALLBACK *tell64_file_func)    OF((voidpf opaque, voidpf stream));
-typedef long     (ZCALLBACK *seek64_file_func)    OF((voidpf opaque, voidpf stream, ZPOS64_T offset, int origin));
-typedef voidpf   (ZCALLBACK *open64_file_func)    OF((voidpf opaque, const void* filename, int mode));
-typedef voidpf   (ZCALLBACK *opendisk64_file_func)OF((voidpf opaque, voidpf stream, unsigned long number_disk, int mode));
+typedef voidpf   (ZCALLBACK *open64_file_func)     OF((voidpf opaque, const void* filename, int mode));
+typedef voidpf   (ZCALLBACK *opendisk64_file_func) OF((voidpf opaque, voidpf stream, unsigned long number_disk, int mode));
+typedef ZPOS64_T (ZCALLBACK *tell64_file_func)     OF((voidpf opaque, voidpf stream));
+typedef long     (ZCALLBACK *seek64_file_func)     OF((voidpf opaque, voidpf stream, ZPOS64_T offset, int origin));
 
 typedef struct zlib_filefunc64_def_s
 {

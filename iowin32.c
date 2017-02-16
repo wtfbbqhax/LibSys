@@ -12,12 +12,12 @@
    See the accompanying LICENSE file for the full text of the license.
 */
 
-#include <stdlib.h>
-#include <tchar.h>
-
-#include "zlib.h"
 #include "ioapi.h"
 #include "iowin32.h"
+
+#include <string.h>
+#include <stdlib.h>
+#include <tchar.h>
 
 #ifndef INVALID_HANDLE_VALUE
 #  define INVALID_HANDLE_VALUE (0xFFFFFFFF)
@@ -48,7 +48,6 @@ typedef struct
     void *filename;
     int filenameLength;
 } WIN32FILE_IOWIN;
-
 
 static void win32_translate_open_mode(int mode,
                                       DWORD* lpdwDesiredAccess,
@@ -267,7 +266,7 @@ voidpf ZCALLBACK win32_opendisk64_file_funcW (voidpf opaque, voidpf stream, int 
     return ret;
 }
 
-voidpf ZCALLBACK win32_opendisk64_file_funcA (voidpf opaque, voidpf stream, int number_disk, int mode)
+voidpf ZCALLBACK win32_opendisk64_file_funcA (voidpf opaque, voidpf stream, unsigned long number_disk, int mode)
 {
     WIN32FILE_IOWIN *iowin = NULL;
     char *diskFilename = NULL;

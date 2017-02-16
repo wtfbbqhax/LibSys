@@ -13,11 +13,7 @@
 #ifndef _IOAPI_BUF_H
 #define _IOAPI_BUF_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "zlib.h"
+#include "zconf.h"
 #include "ioapi.h"
 
 #define IOBUF_BUFFERSIZE (64 * 1024)
@@ -27,9 +23,9 @@ extern "C" {
 #endif
 
 voidpf ZCALLBACK fopen_buf_func OF((voidpf opaque,const char* filename,int mode));
-voidpf ZCALLBACK fopen64_buf_func OF((voidpf opaque,const char* filename,int mode));
-voidpf ZCALLBACK fopendisk_buf_func OF((voidpf opaque, voidpf stream_cd, int number_disk, int mode));
-voidpf ZCALLBACK fopendisk64_buf_func OF((voidpf opaque, voidpf stream_cd, int number_disk, int mode));
+voidpf ZCALLBACK fopen64_buf_func OF((voidpf opaque,const void* filename,int mode));
+voidpf ZCALLBACK fopendisk_buf_func OF((voidpf opaque, voidpf stream_cd, unsigned long number_disk, int mode));
+voidpf ZCALLBACK fopendisk64_buf_func OF((voidpf opaque, voidpf stream_cd, unsigned long number_disk, int mode));
 uLong ZCALLBACK fread_buf_func OF((voidpf opaque,voidpf stream,void* buf,uLong size));
 uLong ZCALLBACK fwrite_buf_func OF((voidpf opaque,voidpf stream,const void* buf,uLong size));
 long ZCALLBACK ftell_buf_func OF((voidpf opaque,voidpf stream));

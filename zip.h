@@ -20,6 +20,7 @@ extern "C" {
 #endif
 
 #ifndef _ZLIB_H
+#  include "zconf.h"
 #  include "zlib.h"
 #endif
 
